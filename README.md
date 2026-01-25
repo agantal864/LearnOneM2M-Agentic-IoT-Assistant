@@ -57,3 +57,5 @@ Utilizes a `filter_node` to manage long-term conversation history, generating su
 4. **Run the Agent:**
    ```bash
    streamlit run app.py
+
+Note: This project is currently a Work in Progress. I am actively refactoring the agent logic and expanding the oneM2M documentation.
