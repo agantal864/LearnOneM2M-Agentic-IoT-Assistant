@@ -1,0 +1,182 @@
+Source: https://acmecse.net/setup/Configuration-introduction/
+
+# Configuration - Introduction
+
+The CSE is highly configurable and can be adapted to different environments and requirements. This article describes the configuration settings and how to change them.
+
+## Introduction
+
+Configuration of CSE parameters is primarily done through a configuration file. This file contains all configurable and customizable
+settings for the CSE. Configurations are mostly optional, and settings in this file overwrite the CSE's default values.
+
+The configuration file follows the Windows INI file format with sections, setting and values. A configuration file may include comments, prefixed with the characters `#` or `;` .
+
+### Command Line Arguments
+
+Also, some settings can be applied via the [command line](../Running/#command-line-arguments) when starting the CSE. These command line arguments overwrite the
+settings in the configuration file.
+
+## The *acme.ini* Configuration File
+
+Warning
+
+Changes should only be done to a copy of the default configuration file.
+
+A default configuration is provided with the file [acme.ini.default](https://github.com/ankraft/ACME-oneM2M-CSE/blob/master/acme/init/acme.ini.default). The settings in this file are the default values for the CSE and can be overwritten by local configuration file.  
+**Don't make changes to the default configuration file**, but rather copy relevant configuration setting to a new file named, for example, *acme.ini*, which is the default configuration file name. You can use another filename, but must then specify it with the `--config` command line argument when [running the ACME CSE](../Running/#running-the-cse)).
+
+It is sufficient to only add the settings to the configuration file that are different from the default settings. All other settings are read from the default config file *acme.ini.default*.
+
+Figure 1: Steps when reading a configuration from the *acme.ini* file
+
+If the configuration file *acme.ini* could not be found at the specified location then an interactive procedure is started to generate a file with basic configuration settings. You can add further configurations if necessary by copying sections and settings from *acme.ini.default*.
+
+Info
+
+It is highly recommended to use this interactive procedure to create the configuration file. This ensures that all necessary settings are present and that the file is correctly formatted.
+
+## Using Apache Zookeeper for Configuration
+
+The CSE can also be configured using [Apache Zookeeper](https://zookeeper.apache.org/). This allows for a more dynamic configuration and is especially useful in distributed environments. The configuration settings are stored in Zookeeper and can be accessed by the CSE at runtime.
+
+Figure 2: Steps when reading a configuration from Apache Zookeeper
+
+In this case, a local configuration file (e.g. *acme.ini*) is **not** used, and the CSE is started with the command line arguments [--config-zk-host](../Running/#command-line-arguments) and [--config-zk-root](../Running/#command-line-arguments) to specify the Zookeeper server and the root configuration node. The CSE will then read the configuration settings from Zookeeper.
+
+Info
+
+Similar to using the *acme.ini* configuration file, it is sufficient to only add the settings to the Zookeeper configuration that are different from the default settings. All other settings are read from the default config file *acme.ini.default*.
+
+One can create a Zookeeper-based configuration using the [Zookeeper Tool](../../development/tools/ZookeeperTool/). First, create a configuration file using either the [onboarding tool](../../development/tools/OnboardingTool/) or do it manually. Then, use the Zookeeper Tool to upload the configuration to Zookeeper. The [Zookeeper Tool](../../development/tools/ZookeeperTool/) will create the necessary nodes and set the configuration settings in Zookeeper.
+
+Info
+
+Zookeeper-based configurations are stored in a hierarchical structure. The root node of this structure must be unique for each CSE and is specified with the `--config-zk-root` command line argument. It is recommended to use the CSE-ID as the root node name, e.g. `/cse/cseID`.
+
+### Example: Starting the CSE with Zookeeper Configuration
+
+The following command starts the CSE with a Zookeeper configuration using the host `localhost` and the root node `id-in`. The default Zookeeper port `2181` is used implicitly.
+
+Starting the CSE with Zookeeper configuration
+
+```
+acmecse --config-zk-host localhost --config-zk-root id-in
+```
+
+## Settings Interpolation
+
+In addition to assigning individual or fixed values for configurations settings you can use [settings interpolation](https://docs.python.org/3/library/configparser.html#interpolation-of-values) which allows you to reference settings from the same or from other sections. The syntax to denote a value from a section is `${section:option}`.
+
+### Built-in Settings
+
+There are some built-in configuration settings that can be used in the configuration file. These settings are provided by the CSE and can be used to reference directories or other values.
+
+**${basic.config:baseDirectory}**
+
+**${baseDirectory}**
+:   Two built-in configuration settings that point to the base-directory of the CSE's data directory. These settings contain either the current working directory or the directory that is specified with the command line argument `--base-directory` or `-dir`.  
+    Both settings are equivalent and can be used interchangeably.
+
+**${configfile}**
+:   Configuration setting that contains the name of the configuration file in the *baseDirectory*.
+
+**${hostIPAddress}**
+:   Built-in configuration setting that contains the current IP address of the CSE host.
+
+**${basic.config:initDirectory}**
+
+**${initDirectory}**
+:   Two built-in configuration settings that point to acme's main *init* directory.  
+    Both settings are equivalent and can be used interchangeably.
+
+    Use built-in settings
+
+    ```
+    [cse]
+    resourcesPath=${basic.config:initDirectory}
+    ```
+
+**${basic.config:moduleDirectory}**
+
+**${moduleDirectory}**
+:   Two built-in configuration settings that point to acme's module directory.
+    Both settings are equivalent and can be used interchangeably.
+
+**${secret}**
+:   Built-in configuration setting that contains the main secret key for the CSE. This key is used, for example, to seed passwords for hashing.  
+    The default for this setting is `acme`, and it is highly recommended to change it to a unique value.  
+    It is also possible to use the environment variable [ACME\_SECURITY\_SECRET](#environment-variables)
+    to set this value.
+
+### Environment Variables
+
+You can also use environment variables in the configuration file. The syntax to get their values is also `${ENVIRONMEMNT_VARIABLE_NAME}`.
+
+Environment variables can be used in the configuration file to provide sensitive information like passwords or API keys, or to provide a more flexible way to set configuration settings.
+
+#### Hiding Sensitive Information
+
+Sensitive information like passwords or API keys should not be stored in the configuration file in plain text. Instead, you can use environment variables to store this information and reference them in the configuration file.
+
+The following environment variables are supported by default for configurations and don't need to be defined separately in the configuration file. They default to empty values if the environment variable is not set.
+
+| Environment Variable | Description | Configuration Setting |
+| --- | --- | --- |
+| ACME\_SECURITY\_SECRET | The main secret key for the CSE. This key is used, for example, so seed passwords for hashing. | [[cse.security].secret](../Configuration-cse/#general-security) |
+| ACME\_DATABASE\_POSTGRESQL\_PASSWORD | Password to authenticate with the PostgreSQL database | [[database.postgresql].password](../Configuration-database/#postgresql) |
+| ACME\_MQTT\_SECURITY\_PASSWORD | Password to authenticate with the MQTT broker | [[mqtt.security].password](../Configuration-mqtt/#security) |
+| ACME\_MQTT\_SECURITY\_USERNAME | Username to authenticate with the MQTT broker | [[mqtt.security].username](../Configuration-mqtt/#security) |
+| ACME\_CSE\_REGISTRAR\_SECURITY\_HTTPUSERNAME | Username for HTTP Basic Authentication with the registrar CSE | [[cse.registrar.security].httpUsername](../Configuration-cse/#registrar-cse-security-settings) |
+| ACME\_CSE\_REGISTRAR\_SECURITY\_HTTPPASSWORD | Password for HTTP Basic Authentication with the registrar CSE | [[cse.registrar.security].httpPassword](../Configuration-cse/#registrar-cse-security-settings) |
+| ACME\_CSE\_REGISTRAR\_SECURITY\_HTTPBEARERTOKEN | Bearer token for HTTP Bearer Token Authentication with the registrar CSE | [[cse.registrar.security].httpBearerToken](../Configuration-cse/#registrar-cse-security-settings) |
+| ACME\_CSE\_REGISTRAR\_SECURITY\_WSUSERNAME | Username for WebSocket Basic Authentication with the registrar CSE | [[cse.registrar.security].wsUsername](../Configuration-cse/#registrar-cse-security-settings) |
+| ACME\_CSE\_REGISTRAR\_SECURITY\_WSPASSWORD | Password for WebSocket Basic Authentication with the registrar CSE | [[cse.registrar.security].wsPassword](../Configuration-cse/#registrar-cse-security-settings) |
+| ACME\_CSE\_REGISTRAR\_SECURITY\_WSBEARERTOKEN | Bearer token for WebSocket Bearer Token Authentication with the registrar CSE | [[cse.registrar.security].wsBearerToken](../Configuration-cse/#registrar-cse-security-settings) |
+| ACME\_CSE\_REGISTRAR\_SECURITY\_SELFHTTPUSERNAME | The CSE's own username for HTTP Basic Authentication with the CSE by a registrar CSE. See also [Authentication Between CSEs](../../howtos/AuthenticationBetweenCSEs/#authenticating-requests-from-the-registrar-cse) | [[cse.security].httpUsername](../Configuration-cse/#registrar-cse-security-settings) |
+| ACME\_CSE\_REGISTRAR\_SECURITY\_SELFHTTPPASSWORD | The CSE's own password for HTTP Basic Authentication with the CSE by a registrar CSE. See also [Authentication Between CSEs](../../howtos/AuthenticationBetweenCSEs/#authenticating-requests-from-the-registrar-cse) | [[cse.security].httpPassword](../Configuration-cse/#registrar-cse-security-settings) |
+| ACME\_CSE\_REGISTRAR\_SECURITY\_SELFWSUSERNAME | The CSE's own username for WebSocket Basic Authentication with the CSE by a registrar CSE. See also [Authentication Between CSEs](../../howtos/AuthenticationBetweenCSEs/#authenticating-requests-from-the-registrar-cse) | [[cse.security].wsUsername](../Configuration-cse/#registrar-cse-security-settings) |
+| ACME\_CSE\_REGISTRAR\_SECURITY\_SELFWSPASSWORD | The CSE's own password for WebSocket Basic Authentication with the CSE by a registrar CSE. See also [Authentication Between CSEs](../../howtos/AuthenticationBetweenCSEs/#authenticating-requests-from-the-registrar-cse) | [[cse.security].wsPassword](../Configuration-cse/#registrar-cse-security-settings) |
+
+#### .env File Support
+
+You can also use a *.env* file to define environment variables for the CSE. This file should be placed in the base directory of the CSE or **one of its parent directories**. It should contain key-value pairs in the format `KEY=VALUE`, one per line. Blank lines or lines starting with `#` are ignored.
+
+When the CSE starts, it will automatically load the environment variables from the *.env* file in its base directory and make them available for use in the configuration file. If the CSE is started with a [different base directory](../Running/#different-base-directory), it will search for the *.env* file in that directory and its parent directories. Loading the *.env* file will **not** overwrite existing environment variables that are already set in the system.
+
+The file in the following example defines the secret key, the PostgreSQL database password, and a custom CSE-ID for the CSE.
+
+Example .env file
+
+```
+# .env file for ACME CSE
+ACME_SECURITY_SECRET=mysecretkey
+ACME_DATABASE_POSTGRESQL_PASSWORD=mydbpassword
+DEPLOYMENT_CSE_ID=mycseid
+```
+
+Besides the pre-defined environment variables from the [previous section](#hiding-sensitive-information), you can also define your own environment variables in the *.env* file and use them in the configuration file.
+In the example above, the custom environment variable `DEPLOYMENT_CSE_ID` is defined and can be used in the configuration file as `${DEPLOYMENT_CSE_ID}`.
+
+Do not commit the .env file to version control
+
+The *.env* file may contain sensitive information like passwords or API keys. It is recommended to add the *.env* file to your *.gitignore* or equivalent file to prevent it from being committed to version control systems like Git.
+
+#### Docker Host IP
+
+Another useful application is to provide the IP address of a Docker host to the CSE. This can be done, for example, by setting the environment variable `DOCKER_HOST_IP` (or adding it to the *.env* file) and using it in the configuration file.
+
+Use Environment Variable to set the Host IP
+
+```
+[basic.config]
+cseHost=${DOCKER_HOST_IP}
+```
+
+## Dot Notation
+
+Configuration settings can be accessed and updated from scripts, for example with the [get-config](../../development/ACMEScript-functions/#get-config) function. For this, the section and setting names are concatenated using dot notation. The full section name is followed by a dot and then the setting name.
+
+For example:
+
+* The *cseID* setting in the *[cse]* section may be accessed by the name `cse.cseID`
+* The *host* setting in the *[database.postgresql]* section may be accessed by the name `database.postgresql.host`

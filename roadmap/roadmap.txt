@@ -1,0 +1,50 @@
+Roadmap Overview
+Phase 1 Data Engineering
+Phase 2 Embedding & Vector DB
+Phase 3 Agentic Logic
+Phase 4 Frontend & UI
+Phase 5 System Integration
+
+Phase 1 - Data Engineering (Lightweight ETL)
+
+Task 1 - Project Structure
+Task 2 - Resource Extraction/Transformation/Load
+	Task 2.1 - "Specifications" Resource 
+	Task 2.2 - "Implementations" Resource 
+	Task 2.3 - "Short Name Dictionary" Resource 
+	Task 2.4 - Codebase Resource 
+
+Phase 2 - Embedding & Vector DB
+
+Task 1 - Vector DB & Embedding Setup
+Task 2 - Vectorization
+
+Phase 3 - Agentic Logic
+
+Task 1
+
+tools
+UI tool visualization
+
+
+Phase 1	The Lab	Setup Python, UV environment, and ACME CSE.	✅ Done
+Phase 2	The Library	Vectorize oneM2M PDFs into ChromaDB (RAG).	✅ Done
+Phase 3	The Brain	Create the "Professor" logic with strict coding rules.	✅ Done
+Phase 4	The Face	Build the Streamlit UI with streaming and session history.	✅ Done
+Phase 5	The Hands	System Integration: Turn the Chatbot into an Agent.	Current
+Phase 6	The Exam	Final testing, edge-case handling, and refinement.	⏳ Next
+Task 5.1: The "Dynamic Requester" Tool
+
+Instead of hardcoded pings, create a tool that can send GET/POST/PUT requests based on LLM reasoning.
+
+Task 5.2: The Routing Logic (Level 3)
+
+Teach the Professor to decide: "Do I need to look at my PDF Library (Theory) or use my Request Tool (Action)?"
+
+Task 5.3: Error Reflection
+
+If a request fails (e.g., 404), the Agent reads the error and explains to the student WHY it failed using the spec context.
+
+Task 5.4: UI Tool Visualization
+
+Add a "Terminal View" in Streamlit sidebar so you can see the raw HTTP traffic the Agent is sending.

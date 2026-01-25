@@ -1,0 +1,14 @@
+# Data 
+requests
+beautifulsoup4
+markdownify
+python-docx
+# Vectorization
+chromadb 
+sentence-transformers
+# Agent
+langchain
+langchain-ollama
+langchain-text-splitters
+# UI
+streamlit

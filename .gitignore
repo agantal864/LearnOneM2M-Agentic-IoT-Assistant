@@ -1,0 +1,28 @@
+# --- Python ---
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+env/
+.env
+
+# --- Databases (Crucial for your project) ---
+# Don't track the local ChromaDB vector store files
+chroma_db/
+*.db
+
+# --- AI & Tools ---
+# If you use LangChain's local tracing or cache
+.langchain/
+.cache/
+
+# --- IDEs ---
+.vscode/
+.idea/
+.DS_Store
+
+# --- OS & Misc ---
+*.log
+dist/
+build/

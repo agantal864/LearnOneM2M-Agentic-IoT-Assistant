@@ -1,0 +1,18 @@
+Source: https://acmecse.net/setup/Configuration-scripting/
+
+# Configuration - Scripting
+
+The ACME CSE [supports scripting](../../development/ACMEScript/) using a Lisp-like scripting language. Scripts can be used to extend the functionality of the CSE, for example, to implement custom logic, writing small applications or to interact with external systems.
+
+## Scripting
+
+**Section: `[scripting]`**
+
+These are the settings for the scripting engine.
+
+| Setting | Description | Default |
+| --- | --- | --- |
+| scriptDirectories | Add one or multiple directory paths to look for scripts, in addition to the ones in the system or runtime `init` directory. Must be a comma-separated list. | not set |
+| verbose | Enable debug output during script execution, such as the current executed line. | False |
+| fileMonitoringInterval | Set the interval to check for new files in the script directories. 0 means disable monitoring. Must be >= 0.0. | 2.0 seconds |
+| maxRuntime | Set the timeout for script execution in seconds. 0.0 seconds means no timeout. Must be >= 0.0. | 60.0 seconds |
