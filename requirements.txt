@@ -6,6 +6,7 @@ python-docx
 # Vectorization
 chromadb 
 sentence-transformers
+einops
 # Agent
 langchain
 langchain-ollama
