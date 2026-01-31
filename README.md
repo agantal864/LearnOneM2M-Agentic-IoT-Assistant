@@ -51,8 +51,13 @@ Utilizes a `filter_node` to manage long-term conversation history, generating su
    
 3. **Initialize Knowledge Base:**
    ```bash
-   python ingest.py
-   python vectorize.py
+   python ingestSpecifications.py
+   python ingestACMEDocs.py
+   python ingestACMErepo.py
+   python processOneM2MSpecs.py
+   python processTR.py
+   python processAcmeDocs.py
+   python processAcmeCode.py
    
 4. **Run the Agent:**
    ```bash
