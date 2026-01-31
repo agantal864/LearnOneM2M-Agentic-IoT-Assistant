@@ -36,7 +36,8 @@ The `HybridRetriever` class combines keyword matching (**BM25**) with semantic v
 A final `synthesize` node acts as a Technical Architect. It merges data from all sub-agents, resolves conflicts between standards and implementation.
 
 ### 4. Execute live oneM2M REST
-The app enables the execution of a live oneM2M REST mapped to an http request. If the user requests for a live oneM2M request to an ACME CSE server, the agent executes the `oneM2MExecuteRest` tool. 
+The app enables the execution of a live oneM2M REST mapped to an http request. If the user requests for a live oneM2M request to an ACME CSE server, the agent executes the `oneM2MExecuteRest` too
+
 ---
 
 ## Installation & Setup
