@@ -1,66 +1,45 @@
-# LearnOneM2M: Agentic IoT Assistant
+# learnOneM2M: Agentic IoT Assistant
 
-An AI-powered autonomous agent designed to teach the **oneM2M IoT standard** while interacting with a live **ACME CSE (Common Service Entity)** server in real-time.
-
----
-
-##  Overview
-LearnOneM2M bridges the gap between complex industrial IoT protocols and user-friendly AI. Built with **LangGraph**, it features a multi-node state machine that can:
-
-* **Educate:** Answer technical questions using a RAG pipeline powered by **ChromaDB**.
-* **Execute:** Perform live REST operations (POST, GET, PUT, DELETE) on an ACME oneM2M server.
-* **Route:** Automatically distinguish between "Theory" requests and "Action" commands using an intent-based router.
+An AI-powered autonomous agent designed to teach the **oneM2M IoT standard** while interacting with a live **acmeCse (Common Service Entity)** server in real-time.
 
 ---
 
-##  Tech Stack
-* **Framework:** LangChain & LangGraph (State Machines)
-* **LLM:** GPT-OSS / Llama 3.1 (8B) / Llama 3.2 (via Ollama)
-* **Database:** ChromaDB (Vector Store for RAG)
-* **IoT Protocol:** oneM2M (ACME CSE Implementation)
-* **Interface:** Streamlit
+## overview
+learnOneM2M bridges the gap between complex industrial IoT protocols and user-friendly AI. Built with **langGraph**, it features a sophisticated multi-agent state machine that can classify queries, perform parallel knowledge retrieval, and synthesize technical answers.
+
+
 
 ---
 
-##  Key Features
-
-### 1. Intent-Based Routing (Level 3 Agent)
-The agent uses a conditional logic gate to determine if a user needs documentation (Retrieval) or server interaction (Tools). This reduces token noise and increases execution accuracy.
-
-### 2. Protocol-Aware Tooling
-Includes a custom-built `execute_onem2m_request` tool that:
-* Handles strict oneM2M header requirements (`X-M2M-Origin`, `X-M2M-RI`, `X-M2M-RVI`).
-* Sanitizes JSON bodies to comply with primitive content constraints (Single-root key validation).
-* Automatically manages Content-Type headers for different resource types (`ty`).
-
-### 3. Dynamic Memory & Summarization
-Utilizes a `filter_node` to manage long-term conversation history, generating summaries to maintain context without exceeding LLM token limits.
+## techStack
+* **orchestrationFramework:** langChain & langGraph (State Machines with Fan-Out support)
+* **llmModels:** ollama local models: llama3.1 (8B) / llama3.2
+* **vectorDatabase:** chromaDb (Multi-collection: TS, TR, acmeDocs, acmeCode)
+* **embeddingModels:** `nomic-ai/nomic-embed-text-v1.5` (Text) & `jinaai/jina-embeddings-v2-base-code` (Code)
+* **searchLogic:** hybridSearch (BM25 + Vector) with Reciprocal Rank Fusion (RRF)
+* **interface:** streamlit
 
 ---
 
-## Installation & Setup
+## keyFeatures
 
-1. **Clone the repository:**
+### 1. multiAgentOrchestration (Fan-Out Pattern)
+The system uses a `classify_query` node to decompose user intent into sub-tasks. It can trigger three specialized agents in parallel:
+* **oneM2MStandardsAgent:** Queries Technical Specifications (TS) and Technical Reports (TR).
+* **acmeDocsAgent:** Focuses on implementation-specific behavior and configurations.
+* **acmeCodeAgent:** Uses a specialized code-embedding model to retrieve Python snippets from the actual acmeCse codebase.
+
+### 2. hybridRetrievalSystem
+The `HybridRetriever` class combines keyword matching (**BM25**) with semantic vector search. It uses **Reciprocal Rank Fusion (RRF)** to re-rank results, ensuring that both precise technical terms and general concepts are retrieved accurately.
+
+### 3. technicalArchitectSynthesis
+A final `synthesize` node acts as a Technical Architect. It merges data from all sub-agents, resolves conflicts between standards and implementation, and enforces oneM2M `camelCase` naming conventions for attributes.
+
+---
+
+## installationAndSetup
+
+1. **cloneTheRepository:**
    ```bash
    git clone [https://github.com/agantal864/LearnOneM2M-Agentic-IoT-Assistant.git](https://github.com/agantal864/LearnOneM2M-Agentic-IoT-Assistant.git)
    cd LearnOneM2M-Agentic-IoT-Assistant
-
-2. **Install Dependencies:**
-   ```bash
-   pip install -r requirements.txt
-   
-3. **Initialize Knowledge Base:**
-   ```bash
-   python ingestSpecifications.py
-   python ingestACMEDocs.py
-   python ingestACMErepo.py
-   python processOneM2MSpecs.py
-   python processTR.py
-   python processAcmeDocs.py
-   python processAcmeCode.py
-   
-4. **Run the Agent:**
-   ```bash
-   streamlit run app.py
-
-Note: This project is currently a Work in Progress. I am actively refactoring the agent logic and expanding the oneM2M documentation.
