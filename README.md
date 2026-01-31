@@ -4,58 +4,63 @@ An AI-powered autonomous agent designed to teach the **oneM2M IoT standard** whi
 
 ---
 
-##  Overview
-LearnOneM2M bridges the gap between complex industrial IoT protocols and user-friendly AI. Built with **LangGraph**, it features a multi-node state machine that can:
+## Overview
+LearnOneM2M bridges the gap between complex industrial IoT protocols and user-friendly AI. Built with **LangGraph**, it features a sophisticated multi-agent state machine that can classify queries, perform parallel knowledge retrieval, and synthesize technical answers.
 
-* **Educate:** Answer technical questions using a RAG pipeline powered by **ChromaDB**.
-* **Execute:** Perform live REST operations (POST, GET, PUT, DELETE) on an ACME oneM2M server.
-* **Route:** Automatically distinguish between "Theory" requests and "Action" commands using an intent-based router.
+
 
 ---
 
-##  Tech Stack
-* **Framework:** LangChain & LangGraph (State Machines)
-* **LLM:** GPT-OSS / Llama 3.1 (8B) / Llama 3.2 (via Ollama)
-* **Database:** ChromaDB (Vector Store for RAG)
-* **IoT Protocol:** oneM2M (ACME CSE Implementation)
+## Tech Stack
+* **Orchestration Framework:** LangChain & LangGraph (State Machines with Fan-Out support)
+* **LLM Models:** Ollama local models: Llama 3.1 (8B) / Llama 3.2
+* **Vector Database:** ChromaDB (Multi-collection: TS, TR, acmeDocs, acmeCode)
+* **Embedding Models:** `nomic-ai/nomic-embed-text-v1.5` (Text) & `jinaai/jina-embeddings-v2-base-code` (Code)
+* **Search Logic:** Hybrid Search (BM25 + Vector) with Reciprocal Rank Fusion (RRF)
 * **Interface:** Streamlit
 
 ---
 
-##  Key Features
+## Key Features
 
-### 1. Intent-Based Routing (Level 3 Agent)
-The agent uses a conditional logic gate to determine if a user needs documentation (Retrieval) or server interaction (Tools). This reduces token noise and increases execution accuracy.
+### 1. Multi-Agent Orchestration (Fan-Out Pattern)
+The app uses a `classify_query` node to decompose user intent into sub-tasks. It can trigger three specialized agents in parallel:
+* **oneM2MStandardsAgent:** Queries Technical Specifications (TS) and Technical Reports (TR).
+* **acmeDocsAgent:** Focuses on implementation-specific behavior and configurations.
+* **acmeCodeAgent:** Uses a specialized code-embedding model to retrieve Python snippets from the actual ACME CSE codebase.
 
-### 2. Protocol-Aware Tooling
-Includes a custom-built `execute_onem2m_request` tool that:
-* Handles strict oneM2M header requirements (`X-M2M-Origin`, `X-M2M-RI`, `X-M2M-RVI`).
-* Sanitizes JSON bodies to comply with primitive content constraints (Single-root key validation).
-* Automatically manages Content-Type headers for different resource types (`ty`).
+### 2. Hybrid Retrieval System
+The `HybridRetriever` class combines keyword matching (**BM25**) with semantic vector search. It uses **Reciprocal Rank Fusion (RRF)** to re-rank results, ensuring that both precise technical terms and general concepts are retrieved accurately.
 
-### 3. Dynamic Memory & Summarization
-Utilizes a `filter_node` to manage long-term conversation history, generating summaries to maintain context without exceeding LLM token limits.
+### 3. Technical Architect Synthesis
+A final `synthesize` node acts as a Technical Architect. It merges data from all sub-agents, resolves conflicts between standards and implementation.
+
+### 4. Execute live oneM2M REST
+The app enables the execution of a live oneM2M REST mapped to an http request. If the user requests for a live oneM2M request to an ACME CSE server, the agent executes the `oneM2MExecuteRest` tool
 
 ---
 
 ## Installation & Setup
 
-1. **Clone the repository:**
+1. **Clone the Repository:**
    ```bash
    git clone [https://github.com/agantal864/LearnOneM2M-Agentic-IoT-Assistant.git](https://github.com/agantal864/LearnOneM2M-Agentic-IoT-Assistant.git)
    cd LearnOneM2M-Agentic-IoT-Assistant
+2. **Install Dependencies**
+   ```bash
+   pip install -r requirements.txt or uv pip install -r requirements.txt
+3. **Initialize Knowledge Base**
+   ```bash
+     # Ingest raw data
+      python ingestSpecifications.py
+      python ingestACMEDocs.py
+      python ingestACMErepo.py
 
-2. **Install Dependencies:**
-   ```bash
-   pip install -r requirements.txt
-   
-3. **Initialize Knowledge Base:**
-   ```bash
-   python ingest.py
-   python vectorize.py
-   
-4. **Run the Agent:**
+      # Process and Vectorize
+      python processOneM2MSpecs.py
+      python processTR.py
+      python processAcmeDocs.py
+      python processAcmeCode.py
+4. **Run Agent**
    ```bash
    streamlit run app.py
-
-Note: This project is currently a Work in Progress. I am actively refactoring the agent logic and expanding the oneM2M documentation.
