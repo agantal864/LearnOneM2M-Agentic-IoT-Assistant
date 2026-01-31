@@ -24,7 +24,7 @@ LearnOneM2M bridges the gap between complex industrial IoT protocols and user-fr
 ## Key Features
 
 ### 1. Multi-Agent Orchestration (Fan-Out Pattern)
-The system uses a `classify_query` node to decompose user intent into sub-tasks. It can trigger three specialized agents in parallel:
+The app uses a `classify_query` node to decompose user intent into sub-tasks. It can trigger three specialized agents in parallel:
 * **oneM2MStandardsAgent:** Queries Technical Specifications (TS) and Technical Reports (TR).
 * **acmeDocsAgent:** Focuses on implementation-specific behavior and configurations.
 * **acmeCodeAgent:** Uses a specialized code-embedding model to retrieve Python snippets from the actual ACME CSE codebase.
@@ -33,8 +33,10 @@ The system uses a `classify_query` node to decompose user intent into sub-tasks.
 The `HybridRetriever` class combines keyword matching (**BM25**) with semantic vector search. It uses **Reciprocal Rank Fusion (RRF)** to re-rank results, ensuring that both precise technical terms and general concepts are retrieved accurately.
 
 ### 3. Technical Architect Synthesis
-A final `synthesize` node acts as a Technical Architect. It merges data from all sub-agents, resolves conflicts between standards and implementation, and enforces oneM2M `camelCase` naming conventions for resource attributes (e.g., `resourceName`, `contentInfo`).
+A final `synthesize` node acts as a Technical Architect. It merges data from all sub-agents, resolves conflicts between standards and implementation.
 
+### 4. Execute live oneM2M REST
+The app enables the execution of a live oneM2M REST mapped to an http request. If the user requests for a live oneM2M request to an ACME CSE server, the agent executes the `oneM2MExecuteRest` tool. 
 ---
 
 ## Installation & Setup
