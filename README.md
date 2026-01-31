@@ -1,45 +1,63 @@
-# learnOneM2M: Agentic IoT Assistant
+# LearnOneM2M: Agentic IoT Assistant
 
-An AI-powered autonomous agent designed to teach the **oneM2M IoT standard** while interacting with a live **acmeCse (Common Service Entity)** server in real-time.
-
----
-
-## overview
-learnOneM2M bridges the gap between complex industrial IoT protocols and user-friendly AI. Built with **langGraph**, it features a sophisticated multi-agent state machine that can classify queries, perform parallel knowledge retrieval, and synthesize technical answers.
-
-
+An AI-powered autonomous agent designed to teach the **oneM2M IoT standard** while interacting with a live **ACME CSE (Common Service Entity)** server in real-time.
 
 ---
 
-## techStack
-* **orchestrationFramework:** langChain & langGraph (State Machines with Fan-Out support)
-* **llmModels:** ollama local models: llama3.1 (8B) / llama3.2
-* **vectorDatabase:** chromaDb (Multi-collection: TS, TR, acmeDocs, acmeCode)
-* **embeddingModels:** `nomic-ai/nomic-embed-text-v1.5` (Text) & `jinaai/jina-embeddings-v2-base-code` (Code)
-* **searchLogic:** hybridSearch (BM25 + Vector) with Reciprocal Rank Fusion (RRF)
-* **interface:** streamlit
+## Overview
+LearnOneM2M bridges the gap between complex industrial IoT protocols and user-friendly AI. Built with **LangGraph**, it features a sophisticated multi-agent state machine that can classify queries, perform parallel knowledge retrieval, and synthesize technical answers.
+
+
 
 ---
 
-## keyFeatures
+## Tech Stack
+* **Orchestration Framework:** LangChain & LangGraph (State Machines with Fan-Out support)
+* **LLM Models:** Ollama local models: Llama 3.1 (8B) / Llama 3.2
+* **Vector Database:** ChromaDB (Multi-collection: TS, TR, acmeDocs, acmeCode)
+* **Embedding Models:** `nomic-ai/nomic-embed-text-v1.5` (Text) & `jinaai/jina-embeddings-v2-base-code` (Code)
+* **Search Logic:** Hybrid Search (BM25 + Vector) with Reciprocal Rank Fusion (RRF)
+* **Interface:** Streamlit
 
-### 1. multiAgentOrchestration (Fan-Out Pattern)
+---
+
+## Key Features
+
+### 1. Multi-Agent Orchestration (Fan-Out Pattern)
 The system uses a `classify_query` node to decompose user intent into sub-tasks. It can trigger three specialized agents in parallel:
 * **oneM2MStandardsAgent:** Queries Technical Specifications (TS) and Technical Reports (TR).
 * **acmeDocsAgent:** Focuses on implementation-specific behavior and configurations.
-* **acmeCodeAgent:** Uses a specialized code-embedding model to retrieve Python snippets from the actual acmeCse codebase.
+* **acmeCodeAgent:** Uses a specialized code-embedding model to retrieve Python snippets from the actual ACME CSE codebase.
 
-### 2. hybridRetrievalSystem
+### 2. Hybrid Retrieval System
 The `HybridRetriever` class combines keyword matching (**BM25**) with semantic vector search. It uses **Reciprocal Rank Fusion (RRF)** to re-rank results, ensuring that both precise technical terms and general concepts are retrieved accurately.
 
-### 3. technicalArchitectSynthesis
-A final `synthesize` node acts as a Technical Architect. It merges data from all sub-agents, resolves conflicts between standards and implementation, and enforces oneM2M `camelCase` naming conventions for attributes.
+### 3. Technical Architect Synthesis
+A final `synthesize` node acts as a Technical Architect. It merges data from all sub-agents, resolves conflicts between standards and implementation, and enforces oneM2M `camelCase` naming conventions for resource attributes (e.g., `resourceName`, `contentInfo`).
 
 ---
 
-## installationAndSetup
+## Installation & Setup
 
-1. **cloneTheRepository:**
+1. **Clone the Repository:**
    ```bash
    git clone [https://github.com/agantal864/LearnOneM2M-Agentic-IoT-Assistant.git](https://github.com/agantal864/LearnOneM2M-Agentic-IoT-Assistant.git)
    cd LearnOneM2M-Agentic-IoT-Assistant
+2. **Install Dependencies**
+   ```bash
+   pip install -r requirements.txt or uv pip install -r requirements.txt
+3. **Initialize Knowledge Base**
+   ```bash
+     # Ingest raw data
+      python ingestSpecifications.py
+      python ingestACMEDocs.py
+      python ingestACMErepo.py
+
+      # Process and Vectorize
+      python processOneM2MSpecs.py
+      python processTR.py
+      python processAcmeDocs.py
+      python processAcmeCode.py
+4. **Run Agent**
+   ```bash
+   streamlit run app.py
