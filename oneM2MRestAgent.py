@@ -9,8 +9,8 @@ from langchain.tools import tool
 
 from pydantic import BaseModel, Field, field_validator
 
-DEFAULT_BASE_URL = "http://localhost:8080/~/in-cse/in-name"
-DEFAULT_ORIGIN = "CAdmin"
+DEFAULT_BASE_URL = "http://localhost:5000/~/id-in/cse-in"
+DEFAULT_ORIGIN = "CArt"
 
 class OneM2MRequestInput(BaseModel):
     method: Optional[str] = Field(default="GET", description="HTTP method (GET, POST, PUT, DELETE). Defaults to GET.")

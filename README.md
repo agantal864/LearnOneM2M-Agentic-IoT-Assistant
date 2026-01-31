@@ -1,6 +1,6 @@
 # LearnOneM2M: Agentic IoT Assistant
 
-An AI-powered autonomous agent designed to teach the **oneM2M IoT standard** while interacting with a live **ACME CSE (Common Service Entity)** server in real-time.
+An AI-powered autonomous agent designed to teach the **oneM2M IoT standard** by interacting with a live **ACME CSE (Common Service Entity)** server in real-time.
 
 ---
 
@@ -13,7 +13,7 @@ LearnOneM2M bridges the gap between complex industrial IoT protocols and user-fr
 
 ## Tech Stack
 * **Orchestration Framework:** LangChain & LangGraph (State Machines with Fan-Out support)
-* **LLM Models:** Ollama local models: Llama 3.1 (8B) / Llama 3.2
+* **LLM Models:** Ollama local models: Llama 3.1 (8B) for refining metadata during data chunking and vectorization. GPT-OSS 20B for multi-agent systems. 
 * **Vector Database:** ChromaDB (Multi-collection: TS, TR, acmeDocs, acmeCode)
 * **Embedding Models:** `nomic-ai/nomic-embed-text-v1.5` (Text) & `jinaai/jina-embeddings-v2-base-code` (Code)
 * **Search Logic:** Hybrid Search (BM25 + Vector) with Reciprocal Rank Fusion (RRF)

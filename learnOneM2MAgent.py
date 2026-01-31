@@ -25,8 +25,8 @@ TR_COLLECTION = "oneM2MApiGuide"
 DOCS_COLLECTION = "acmeDocs"
 CODE_COLLECTION = "acmeCSEcode"
 
-DEFAULT_BASE_URL = "http://localhost:8080/~/in-cse/in-name"
-DEFAULT_ORIGIN = "CAdmin"
+DEFAULT_BASE_URL = "http://localhost:5000/~/id-in/cse-in"
+DEFAULT_ORIGIN = "CArt"
 
 OllamaModel = ChatOllama(model="gpt-oss:20b", temperature=0)
 # Initialize Chroma and embedding function
@@ -62,7 +62,7 @@ class RouterState(TypedDict):
 class OneM2MRequestInput(BaseModel):
     method: Optional[str] = Field(default="GET", description="HTTP method (GET, POST, PUT, DELETE). Defaults to GET.")
     url: Optional[str] = Field(default=DEFAULT_BASE_URL, description="Target oneM2M resource URL. Defaults to IN-CSE base URL.")
-    origin: Optional[str] = Field(default=DEFAULT_ORIGIN,description="X-M2M-Origin. Defaults to CAdmin.")
+    origin: Optional[str] = Field(default=DEFAULT_ORIGIN,description="X-M2M-Origin. Defaults to CArt.")
     resource_type: Optional[int] = Field(default=None, description="oneM2M resource type (ty). Inferred if missing.")
     payload: Optional[Dict[str, Any]] = Field(default=None, description="oneM2M JSON payload. Auto-generated if missing.")
 
@@ -180,16 +180,15 @@ def oneM2MExecuteRest(method: str, url: str, origin: str, resource_type: int = N
     """
     headers = {
         "X-M2M-Origin": origin,
-        "X-M2M-RI": str(uuid.uuid4()),
+        "X-M2M-RI": "req_" + str(uuid.uuid4()),
         "X-M2M-RVI": "3",
         "Accept": "application/json",
+        "Content-Type": "application/json"
     }
     
-    # logic specifically for oneM2M POST vs PUT
+    # logic specifically for oneM2M POST
     if method.upper() == "POST":
-        headers["Content-Type"] = f"application/json;ty={resource_type}" if resource_type else "application/json"
-    elif method.upper() == "PUT":
-        headers["Content-Type"] = "application/json"
+        headers["Content-Type"] = f"application/json;ty={resource_type}" 
 
     try:
         response = requests.request(
@@ -307,7 +306,93 @@ def query_codebase(state: AgentInput) -> dict:
     print("test query_docs: ", result)
     return {"results": [{"source": "oneM2MACMECodebase", "result": result["messages"][-1].content}]}
 
-def synthesize_results(state: RouterState) -> dict:
+def createoneM2MRest(state: RouterState) -> dict:
+    """
+    Synthesizes research into a proposed JSON payload and parameters.
+    Does NOT execute the REST call yet.
+    """
+    structuredLlm = OllamaModel.with_structured_output(OneM2MRequestInput)
+    researchFindings = "\n".join([r['result'] for r in state["results"]])
+    
+    # LLM builds the ideal request based on findings
+    prompt = f"""
+    USER INTENT: {state['query']}
+    KNOWLEDGE CONTEXT:
+    {researchFindings}  
+    TASK:
+    Generate the precise oneM2M HTTP parameters. You must follow these protocol rules:
+    1. OPERATION MAPPING:
+        - If creating: Use POST, define 'resource_type' (ty), and wrap payload in 'm2m:<shortName>'.
+        - If fetching: Use GET. No payload.
+        - If updating: Use PUT. Payload should only contain attributes being changed.
+        - If deleting: Use DELETE. No payload.
+    2. TARGETING (To):
+        - Use the structured path: '{DEFAULT_BASE_URL}'.
+        - If the user targets a specific sub-resource, append the 'rn' (resourceName) to the URL.
+    3. RESOURCE IDENTIFICATION:
+        - Match the 'ty' (int) and 'm2m root key' based on Standards (e.g., AE=2, Container=3, ContentInstance=4, Subscription=23).
+    4. ATTRIBUTE VALIDATION:
+        - Use 'camelCase' for all attributes (e.g., 'resourceName', 'maxNrOfInstances').
+        - Include mandatory attributes found in research (e.g., 'api' and 'rr' for AE; 'pc' for notifications).
+    Generate the OneM2MRequestInput now.
+    """
+    proposedParams = structuredLlm.invoke(prompt)
+    # Return the proposal to the results list
+    return {"results": [{"source": "proposalEngine", "result": proposedParams.model_dump()}]}
+
+def validateOneM2MRest(state: RouterState) -> dict:
+    # 1. Retrieve the actual data dictionary
+    proposal = next((r['result'] for r in state["results"] if r['source'] == "proposalEngine"), None)
+    
+    if not proposal:
+        return {"results": [{"source": "executionEngine", "result": "Error: No proposal generated."}]}
+
+    # 2. Context from research
+    context = "\n".join([r['result'] for r in state["results"] if r['source'] not in ["proposalEngine", "executionEngine"]])
+
+    # 3. Dynamic Validation
+    validationPrompt = f"""
+        You are a oneM2M ACME CSE Protocol Validator. 
+        Verify the Proposed Request: {proposal}
+        Against the discovered Research Findings: {context}
+
+        VALIDATION RULES:
+        1. MANDATORY ATTRIBUTES: Identify the resource type (ty) from the proposal. 
+        Cross-reference with the Research Findings to ensure all mandatory attributes 
+        for that specific type are present in the payload.
+        2. ROOT KEY MATCH: Ensure the JSON root key (e.g., m2m:ae, m2m:cnt, m2m:sub) 
+        matches the resource type (ty) indicated in the headers.
+        3. HIERARCHY: Ensure the parent resource in the URL can logically host the 
+        child resource being created.
+        4. ADDRESSING: The URL must follow the ACME structured format: ~/id-in/cse-in/
+
+        If all rules are met, respond 'VALID'.
+        If any are missing, respond 'REJECTED: [Specific oneM2M attribute or rule violated]'.
+        """
+    validationResponse = OllamaModel.invoke(validationPrompt).content
+
+    if "REJECTED" in validationResponse.upper():
+        # This triggers the loopback in continueExecution
+        return {"results": [{"source": "executionEngine", "result": validationResponse}]}
+
+    # 4. Validated -> Execute
+    # We pass the dictionary directly to the tool
+    executionResult = oneM2MExecuteRest.invoke(proposal) 
+
+    return {"results": [{"source": "executionEngine", "result": str(executionResult)}]}
+
+def continueExecution(state: RouterState) -> Literal["execute_action", "synthesize"]:
+    """
+    Checks the last result in the state. If it contains a rejection,
+    it sends the agent back to the drawing board.
+    """
+    lastResult = state["results"][-1]["result"]
+    if "REJECTED" in lastResult or "Error" in lastResult:
+        # You might want to limit the number of retries to avoid infinite loops
+        return "createoneM2MRest"
+    return "synthesize"
+
+def synthesizeResults(state: RouterState) -> dict:
     """Consolidates validation steps and execution results into a step-by-step report."""
 
     if not state["results"]:
@@ -353,41 +438,34 @@ def synthesize_results(state: RouterState) -> dict:
     finalResponse = OllamaModel.invoke(synthesisPrompt)
     return {"final_answer": finalResponse.content}
 
-def execute_action(state: RouterState) -> dict:
-    """
-    This node takes the 'validated plan' from the synthesis 
-    and actually triggers the ACME CSE call.
-    """
-    # Use the LLM to extract the final tool parameters from the synthesized validation
-    structured_llm = OllamaModel.with_structured_output(OneM2MRequestInput)
-    
-    # We look at the results gathered so far to build the perfect request
-    context = "\n".join([r['result'] for r in state["results"]])
-    tool_params = structured_llm.invoke(f"Based on these standards and docs: {context}, extract the parameters for {state['query']}")
-    
-    # Execute the tool
-    execution_result = oneM2MExecuteRest.invoke(tool_params.model_dump())
-    
-    return {"results": [{"source": "executionEngine", "result": str(execution_result)}]}
-
 workflow = (
     StateGraph(RouterState)
     .add_node("classify", classify_query)
     .add_node("oneM2MStandards", query_standards)
     .add_node("oneM2MACMEDocs", query_docs)
     .add_node("oneM2MACMECodebase", query_codebase)
-    .add_node("execute_action", execute_action)
-    .add_node("synthesize", synthesize_results)
+    .add_node("createoneM2MRest", createoneM2MRest)
+    .add_node("validateOneM2MRest", validateOneM2MRest)
+    .add_node("synthesize", synthesizeResults)
+
     .add_edge(START, "classify")
     .add_conditional_edges("classify", route_to_agents, ["oneM2MStandards", "oneM2MACMEDocs", "oneM2MACMECodebase"])
-    .add_edge(["oneM2MStandards", "oneM2MACMEDocs", "oneM2MACMECodebase"], "execute_action")
-    .add_edge("execute_action", "synthesize")
+    .add_edge(["oneM2MStandards", "oneM2MACMEDocs", "oneM2MACMECodebase"], "createoneM2MRest")
+    .add_edge("createoneM2MRest", "validateOneM2MRest")
+    .add_conditional_edges(
+        "validateOneM2MRest", 
+        continueExecution, 
+        {
+            "createoneM2MRest": "createoneM2MRest", # Loop back to fix errors
+            "synthesize": "synthesize"           # Proceed to final report
+        }
+    )
     .add_edge("synthesize", END)
     .compile()
 )
 
 result = workflow.invoke({
-    "query": "Create an AE"
+    "query": "Create an AE with api = Nzis"
 })
 
 print("Original query:", result["query"])
