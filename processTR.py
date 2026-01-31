@@ -76,7 +76,7 @@ if __name__ == "__main__":
 
         # Prepare data for upsert
         ids = [item[0] for item in docsWithIds]
-        documents = [item[1].page_content for item in docsWithIds]
+        documents = [f"search_document: {item[1].page_content}" for item in docsWithIds]
         metadatas = [item[1].metadata for item in docsWithIds]
 
         # Upsert to ChromaDB
