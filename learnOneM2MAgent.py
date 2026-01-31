@@ -1,4 +1,6 @@
-from typing import Annotated, Literal
+import uuid
+import requests
+from typing import Annotated, Literal, Optional, Dict, Any
 from typing_extensions import TypedDict
 import operator
 # langchain 
@@ -12,17 +14,21 @@ from chromadb.utils import embedding_functions
 from rank_bm25 import BM25Okapi
 import re
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from langgraph.graph import StateGraph, START, END
 from langgraph.types import Send
 
+
 CHROMA_PATH = "./chroma_db"
-OllamaModel = ChatOllama(model="llama3.1:latest", temperature=0)
 TS_COLLECTION = "oneM2MSpecsv3"
 TR_COLLECTION = "oneM2MApiGuide"
 DOCS_COLLECTION = "acmeDocs"
 CODE_COLLECTION = "acmeCSEcode"
 
+DEFAULT_BASE_URL = "http://localhost:8080/~/in-cse/in-name"
+DEFAULT_ORIGIN = "CAdmin"
+
+OllamaModel = ChatOllama(model="gpt-oss:20b", temperature=0)
 # Initialize Chroma and embedding function
 client = chromadb.PersistentClient(path=CHROMA_PATH)
 embeddingFunc = embedding_functions.SentenceTransformerEmbeddingFunction(model_name="nomic-ai/nomic-embed-text-v1.5", trust_remote_code=True)
@@ -53,6 +59,16 @@ class RouterState(TypedDict):
     results: Annotated[list[AgentOutput], operator.add]  # Reducer collects parallel results
     final_answer: str
 
+class OneM2MRequestInput(BaseModel):
+    method: Optional[str] = Field(default="GET", description="HTTP method (GET, POST, PUT, DELETE). Defaults to GET.")
+    url: Optional[str] = Field(default=DEFAULT_BASE_URL, description="Target oneM2M resource URL. Defaults to IN-CSE base URL.")
+    origin: Optional[str] = Field(default=DEFAULT_ORIGIN,description="X-M2M-Origin. Defaults to CAdmin.")
+    resource_type: Optional[int] = Field(default=None, description="oneM2M resource type (ty). Inferred if missing.")
+    payload: Optional[Dict[str, Any]] = Field(default=None, description="oneM2M JSON payload. Auto-generated if missing.")
+
+    @field_validator("method")
+    def normalize_method(cls, v):
+        return v.upper()
 
 class HybridRetriever:
     def __init__(self, collection, k=60):
@@ -144,7 +160,7 @@ def searchOneM2MTr(query: str) -> str:
 def searchAcmeDocs(query: str) -> str:
     """
     Searches the ACME oneM2M CSE implementation documentation.
-    Use this tool to answer questions about ACME oneM2M CSE implementation (e.g., CSE behavior, configuration, supported oneM2M features, limitations, defaults, etc.).
+    Use this tool to answer questions about ACME oneM2M CSE implementation (e.g., configurations).
     """
     results = acmeDocsRetriever.search(query, nResults=3)
     return "\n\n---\n\n".join(results)
@@ -155,6 +171,42 @@ def searchAcmeCodeBase(query: str) -> str:
     Use this to find specific examples of how features in OneM2M ACME CSE are implemented in Python."""
     results = acmeCodebaseRetriever.search(query, nResults=5)
     return "\n\n---\n\n".join(results)
+
+@tool(args_schema=OneM2MRequestInput)
+def oneM2MExecuteRest(method: str, url: str, origin: str, resource_type: int = None, payload: dict = None):
+    """
+    Executes a real-time oneM2M REST call. Use this ONLY after 
+    the parameters have been validated against the standards.
+    """
+    headers = {
+        "X-M2M-Origin": origin,
+        "X-M2M-RI": str(uuid.uuid4()),
+        "X-M2M-RVI": "3",
+        "Accept": "application/json",
+    }
+    
+    # logic specifically for oneM2M POST vs PUT
+    if method.upper() == "POST":
+        headers["Content-Type"] = f"application/json;ty={resource_type}" if resource_type else "application/json"
+    elif method.upper() == "PUT":
+        headers["Content-Type"] = "application/json"
+
+    try:
+        response = requests.request(
+            method=method.upper(), 
+            url=url, 
+            headers=headers, 
+            json=payload, 
+            timeout=10
+        )
+        return {
+            "statusCode": response.status_code,
+            "body": response.json() if response.status_code != 204 else "Success (No Content)",
+            "usedHeaders": headers
+        }
+    except Exception as e:
+        return f"executionError: {str(e)}"
+
 
 oneM2MStandardsAgent = create_agent(
     OllamaModel,
@@ -207,19 +259,18 @@ def classify_query(state: RouterState) -> dict:
             Use for questions about mandatory attributes, resource definitions (e.g., <container>, <AE>), and standard protocol flows.
             
             - oneM2MACMEDocs: Consult for the ACME CSE implementation documentation. 
-            Use for questions about CSE-specific behavior, configuration settings, supported features, limitations, and default values in the ACME environment.
+            Use for questions about ACME CSE-specific behavior and its configuration.
             
             - oneM2MACMECodebase: Consult for the actual Python source code of the ACME CSE. 
-            Use for questions requiring concrete implementation details, function signatures, class definitions, and Python code examples of how oneM2M features are built in ACME.
+            Use for questions requiring concrete implementation details, function signatures, class definitions, and Python code examples of how oneM2M features are built in ACME. You can infer from the code on how to implement the user request.
 
 
             Return ONLY the sources that are relevant to the query. Each source should have
             a targeted sub-question optimized for that specific knowledge domain.
 
             MANDATORY PROTOCOL:
-            1. If the user asks 'how to do X in ACME', you MUST invoke BOTH oneM2MStandards AND oneM2MACMEDocs.
-            2. If the user asks for code examples, you MUST invoke oneM2MACMECodebase.
-            3. Treat the query as multi-part: Part A (Standard definition), Part B (ACME implementation)."""
+            1. If the user asks for code examples, you MUST invoke oneM2MACMEDocs for ACME configuration, invoke oneM2MACMECodebase to infer from the codebase, and invoke oneM2MStandards for validation.
+            2. Treat the query as multi-part: Part A (Standard definition), Part B (ACME implementation)."""
         },
         {"role": "user", "content": state["query"]}
     ])
@@ -257,36 +308,67 @@ def query_codebase(state: AgentInput) -> dict:
     return {"results": [{"source": "oneM2MACMECodebase", "result": result["messages"][-1].content}]}
 
 def synthesize_results(state: RouterState) -> dict:
-    """Combine results from all agents into a coherent answer."""
+    """Consolidates validation steps and execution results into a step-by-step report."""
+
     if not state["results"]:
-        return {"final_answer": "No results found from any knowledge source."}
+        return {"final_answer": "No information or execution results were gathered."}
 
     # Format results for synthesis
-    formatted = [
-        f"**From {r['source'].title()}:**\n{r['result']}"
-        for r in state["results"]
-    ]
+    formattedResults = []
+    for r in state["results"]:
+        sourceName = r['source'].replace("oneM2M", "").title()
+        formattedResults.append(f"### Findings from {sourceName}:\n{r['result']}")
+    synthesisPrompt = [
+            {
+                "role": "system",
+                "content": f"""You are a Technical Architect reporting on a oneM2M operation.
+                Query: "{state['query']}"
 
-    synthesis_response = OllamaModel.invoke([
-        {
-            "role": "system",
-            "content": f"""You are a Technical Architect synthesizing information for the query: "{state['query']}"
+                YOUR TASK:
+                1. Summarize the validation steps (what the Standards, ACME Docs, and ACME Codebase agents found).
+                2. Present the final execution result from the 'ExecutionEngine'.
+                3. Provide the specific Python code or JSON payload used for the successful call.
+                
+                STRUCTURE YOUR RESPONSE AS FOLLOWS:
+                ## 1. Validation Phase
+                Explain what rules were checked (e.g., mandatory attributes for the resource type).
+                
+                ## 2. Execution Phase
+                Detail the HTTP method, URL, Payload, and the outcome (Status Code).
+                
+                ## 3. Steps Taken
+                Use a numbered list to show the logic: 
+                1. Identified resource type.
+                2. Verified headers.
+                3. Constructed payload.
+                4. Executed REST call.
 
-            GOALS:
-            1. Consolidate standard definitions (from oneM2M) with implementation details (from ACME).
-            2. If Python code or JSON examples are provided, include them in proper Markdown code blocks.
-            3. Use clear headings (e.g., ## Standard Definition, ## ACME Implementation).
-            4. If there is a conflict between the standard and the implementation, highlight it as a 'Note'.
-            
-            STYLE:
-            - Professional, concise, and scannable.
-            - Use camelCase for attribute names as per oneM2M convention.
-            """
-        },
-        {"role": "user", "content": "\n\n".join(formatted)}
-    ])
+                STYLE:
+                - Use camelCase for all oneM2M attributes.
+                - Use Markdown code blocks for JSON/Python.
+                """
+            },
+            {"role": "user", "content": "\n\n".join(formattedResults)}
+        ]
+    finalResponse = OllamaModel.invoke(synthesisPrompt)
+    return {"final_answer": finalResponse.content}
 
-    return {"final_answer": synthesis_response.content}
+def execute_action(state: RouterState) -> dict:
+    """
+    This node takes the 'validated plan' from the synthesis 
+    and actually triggers the ACME CSE call.
+    """
+    # Use the LLM to extract the final tool parameters from the synthesized validation
+    structured_llm = OllamaModel.with_structured_output(OneM2MRequestInput)
+    
+    # We look at the results gathered so far to build the perfect request
+    context = "\n".join([r['result'] for r in state["results"]])
+    tool_params = structured_llm.invoke(f"Based on these standards and docs: {context}, extract the parameters for {state['query']}")
+    
+    # Execute the tool
+    execution_result = oneM2MExecuteRest.invoke(tool_params.model_dump())
+    
+    return {"results": [{"source": "executionEngine", "result": str(execution_result)}]}
 
 workflow = (
     StateGraph(RouterState)
@@ -294,18 +376,18 @@ workflow = (
     .add_node("oneM2MStandards", query_standards)
     .add_node("oneM2MACMEDocs", query_docs)
     .add_node("oneM2MACMECodebase", query_codebase)
+    .add_node("execute_action", execute_action)
     .add_node("synthesize", synthesize_results)
     .add_edge(START, "classify")
     .add_conditional_edges("classify", route_to_agents, ["oneM2MStandards", "oneM2MACMEDocs", "oneM2MACMECodebase"])
-    .add_edge("oneM2MStandards", "synthesize")
-    .add_edge("oneM2MACMEDocs", "synthesize")
-    .add_edge("oneM2MACMECodebase", "synthesize")
+    .add_edge(["oneM2MStandards", "oneM2MACMEDocs", "oneM2MACMECodebase"], "execute_action")
+    .add_edge("execute_action", "synthesize")
     .add_edge("synthesize", END)
     .compile()
 )
 
 result = workflow.invoke({
-    "query": "What is a container in oneM2M? how do i create one in ACME?"
+    "query": "Create an AE"
 })
 
 print("Original query:", result["query"])

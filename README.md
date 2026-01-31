@@ -5,7 +5,7 @@ An AI-powered autonomous agent designed to teach the **oneM2M IoT standard** whi
 ---
 
 ## Overview
-LearnOneM2M bridges the gap between complex industrial IoT protocols and user-friendly AI. Built with **LangGraph**, it features a sophisticated multi-agent state machine that can classify queries, perform parallel knowledge retrieval, and synthesize technical answers.
+LearnOneM2M bridges the gap between complex industrial IoT protocols and user-friendly AI. Built with **LangGraph**, it features a multi-agent state machine that can classify queries, perform parallel knowledge retrieval, execute oneM2M REST, and synthesize technical answers.
 
 
 
