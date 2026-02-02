@@ -1,19 +1,18 @@
 import streamlit as st
-from agentLogic import professor_agent
 from langchain_core.messages import HumanMessage, AIMessage
 
 # --- 1. PAGE CONFIG & SIDEBAR ---
 st.set_page_config(page_title="oneM2M Professor", page_icon="🎓", layout="wide")
 
 with st.sidebar:
-    st.title("📚 Course Materials")
+    st.title(" Course Materials")
     st.markdown("""
     **Active Specifications:**
     - TS-0001 (Architecture)
     - TS-0004 (Protocols)
     - ACME CSE Documentation
     
-    **Current Status:** 🟢 Knowledge Base Linked
+    **Current Status:**  Knowledge Base Linked
     """)
     if st.button("Clear Classroom (Reset Chat)"):
         st.session_state.messages = []

@@ -25,7 +25,7 @@ def runQueryTests():
 
     # Define a list of test queries
     test_queries = [
-        "deactivate a subscription",
+        "Find the implementation logic for creating a 'cnt' resource and check for any specific name validation for 'rn' (resourceName)",
     ]
 
     print("\n" + "="*50)

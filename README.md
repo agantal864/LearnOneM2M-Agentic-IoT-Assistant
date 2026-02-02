@@ -8,7 +8,6 @@ An AI-powered autonomous agent designed to teach the **oneM2M IoT standard** by 
 LearnOneM2M bridges the gap between complex industrial IoT protocols and user-friendly AI. Built with **LangGraph**, it features a multi-agent state machine that can classify queries, perform parallel knowledge retrieval, execute oneM2M REST, and synthesize technical answers.
 
 
-
 ---
 
 ## Tech Stack
@@ -17,14 +16,14 @@ LearnOneM2M bridges the gap between complex industrial IoT protocols and user-fr
 * **Vector Database:** ChromaDB (Multi-collection: TS, TR, acmeDocs, acmeCode)
 * **Embedding Models:** `nomic-ai/nomic-embed-text-v1.5` (Text) & `jinaai/jina-embeddings-v2-base-code` (Code)
 * **Search Logic:** Hybrid Search (BM25 + Vector) with Reciprocal Rank Fusion (RRF)
-* **Interface:** Streamlit
+* **Interface:** Streamlit (Ongoing)
 
 ---
 
 ## Key Features
 
 ### 1. Multi-Agent Orchestration (Fan-Out Pattern)
-The app uses a `classify_query` node to decompose user intent into sub-tasks. It can trigger three specialized agents in parallel:
+The app uses a `classifyNode` node to decompose user intent into sub-tasks. It can trigger three specialized agents in parallel:
 * **oneM2MStandardsAgent:** Queries Technical Specifications (TS) and Technical Reports (TR).
 * **acmeDocsAgent:** Focuses on implementation-specific behavior and configurations.
 * **acmeCodeAgent:** Uses a specialized code-embedding model to retrieve Python snippets from the actual ACME CSE codebase.
@@ -62,5 +61,11 @@ The app enables the execution of a live oneM2M REST mapped to an http request. I
       python processAcmeDocs.py
       python processAcmeCode.py
 4. **Run Agent**
-   ```bash
-   streamlit run app.py
+   * **Learn oneM2M**
+     ```bash
+     python learnOneM2MAgent.py
+     ```
+   * **REST oneM2M**
+     ```bash
+     python restM2MAgent.py
+     ```
