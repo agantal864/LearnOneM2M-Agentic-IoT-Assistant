@@ -16,6 +16,7 @@ LearnOneM2M bridges the gap between complex industrial IoT protocols and user-fr
 * **Vector Database:** ChromaDB (Multi-collection: TS, TR, acmeDocs, acmeCode)
 * **Embedding Models:** `nomic-ai/nomic-embed-text-v1.5` (Text) & `jinaai/jina-embeddings-v2-base-code` (Code)
 * **Search Logic:** Hybrid Search (BM25 + Vector) with Reciprocal Rank Fusion (RRF)
+* **oneM2M Server** [ACME CSE by Ankraft](https://github.com/ankraft/ACME-oneM2M-CSE)
 * **Interface:** Streamlit (Ongoing)
 
 ---
